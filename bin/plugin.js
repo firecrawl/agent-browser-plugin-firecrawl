@@ -86,7 +86,18 @@ function browserCreateBody(request) {
   if (r.ttl != null) body.ttl = r.ttl;
   if (r.activityTtl != null) body.activityTtl = r.activityTtl;
   if (r.streamWebView != null) body.streamWebView = r.streamWebView;
-  if (r.profile != null) body.profile = r.profile;
+  // Persistent login profile (Layer 2 / browser auth). An explicit profile in
+  // the launch request wins; otherwise fall back to env, mirroring how the
+  // built-in Kernel provider reads KERNEL_PROFILE_NAME.
+  if (r.profile != null) {
+    body.profile = r.profile;
+  } else if (process.env.FIRECRAWL_PROFILE_NAME) {
+    body.profile = { name: process.env.FIRECRAWL_PROFILE_NAME };
+    const save = process.env.FIRECRAWL_PROFILE_SAVE_CHANGES;
+    if (save != null && save !== "") {
+      body.profile.saveChanges = !/^(0|false|no|off)$/i.test(save);
+    }
+  }
   return body;
 }
 

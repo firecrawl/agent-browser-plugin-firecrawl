@@ -83,14 +83,35 @@ The `--payload` JSON is forwarded as the request body to the matching Firecrawl 
 
 ### Environment variables
 
+The plugin reuses Firecrawl's standard env vars — the **same ones the Firecrawl CLI and SDK use** — so if Firecrawl is already set up in your shell, the plugin works with no extra config.
+
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
-| `FIRECRAWL_API_KEY` | yes | — | Firecrawl API key (`fc-...`). |
-| `FIRECRAWL_API_URL` | no | `https://api.firecrawl.dev` | Override for self-hosted Firecrawl. |
+| `FIRECRAWL_API_KEY` | yes\* | — | Firecrawl API key (`fc-...`). Authenticates the plugin to the Firecrawl API. |
+| `FIRECRAWL_API_URL` | no | `https://api.firecrawl.dev` | Override for self-hosted Firecrawl (no key required for local instances). |
+| `FIRECRAWL_PROFILE_NAME` | no | — | Persistent browser profile to load (cookies/localStorage/login state). |
+| `FIRECRAWL_PROFILE_SAVE_CHANGES` | no | `true` | Save browser state back to the profile on close. Set `false`/`0` for read-only. |
+
+\* Not required when `FIRECRAWL_API_URL` points at a self-hosted instance.
+
+### Two auth layers
+
+- **API auth (plugin → Firecrawl):** the `FIRECRAWL_API_KEY` env var — same convention as the built-in Browserbase/Browserless/Kernel providers.
+- **Browser auth (session → target site):** Firecrawl **persistent profiles**. Set `FIRECRAWL_PROFILE_NAME` (or pass `profile` in the launch request) to log in once and reuse the session:
+
+  ```bash
+  # First run: log in, state is saved to the profile
+  FIRECRAWL_PROFILE_NAME=my-app agent-browser --provider firecrawl open https://app.example.com/login
+  # ... drive the login with agent-browser, then close ...
+
+  # Later runs: already authenticated
+  FIRECRAWL_PROFILE_NAME=my-app FIRECRAWL_PROFILE_SAVE_CHANGES=false \
+    agent-browser --provider firecrawl open https://app.example.com/dashboard
+  ```
 
 ### Browser session options
 
-The `browser.launch` request forwards these fields (when present) to `POST /v2/browser`: `ttl`, `activityTtl`, `streamWebView`, `profile` (`{ name, saveChanges }` for persistent login state).
+The `browser.launch` request forwards these fields (when present) to `POST /v2/browser`: `ttl`, `activityTtl`, `streamWebView`, and `profile` (`{ name, saveChanges }`). If the request has no `profile`, the `FIRECRAWL_PROFILE_NAME` env var is used.
 
 ## Policy gating
 
