@@ -57,14 +57,30 @@ async function readStdin() {
 
 async function api(method, path, body) {
   if (!API_KEY) throw new Error("FIRECRAWL_API_KEY is not set");
-  const res = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${API_KEY}`,
-      ...(body ? { "Content-Type": "application/json" } : {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  // Bound the request so a stalled call can't block the plugin from emitting
+  // its single response. Overridable via FIRECRAWL_HTTP_TIMEOUT_MS.
+  const controller = new AbortController();
+  const timeoutMs = Number(process.env.FIRECRAWL_HTTP_TIMEOUT_MS) || 60000;
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let res;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${API_KEY}`,
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err && err.name === "AbortError") {
+      throw new Error(`Firecrawl ${method} ${path} timed out after ${timeoutMs}ms`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
   const text = await res.text();
   let json;
   try {
@@ -125,6 +141,7 @@ async function handle(input) {
   if (type === "browser.launch") {
     const session = await api("POST", "/v2/browser", browserCreateBody(input.request));
     if (!session.cdpUrl) throw new Error("Firecrawl did not return a cdpUrl");
+    if (!session.id) throw new Error("Firecrawl did not return a session id");
     return ok({
       browser: {
         cdpUrl: session.cdpUrl,
