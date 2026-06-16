@@ -80,17 +80,22 @@ async function api(method, path, body) {
 }
 
 // Forward only the session fields Firecrawl's POST /v2/browser understands.
+// agent-browser sends `{ provider, session, launchOptions: {...} }`, so known
+// Firecrawl params may arrive nested under launchOptions (or top-level when the
+// plugin is driven directly). Merge both, launchOptions taking precedence.
 function browserCreateBody(request) {
   const r = request && typeof request === "object" ? request : {};
+  const opts = r.launchOptions && typeof r.launchOptions === "object" ? r.launchOptions : {};
+  const src = { ...r, ...opts };
   const body = {};
-  if (r.ttl != null) body.ttl = r.ttl;
-  if (r.activityTtl != null) body.activityTtl = r.activityTtl;
-  if (r.streamWebView != null) body.streamWebView = r.streamWebView;
+  if (src.ttl != null) body.ttl = src.ttl;
+  if (src.activityTtl != null) body.activityTtl = src.activityTtl;
+  if (src.streamWebView != null) body.streamWebView = src.streamWebView;
   // Persistent login profile (Layer 2 / browser auth). An explicit profile in
   // the launch request wins; otherwise fall back to env, mirroring how the
   // built-in Kernel provider reads KERNEL_PROFILE_NAME.
-  if (r.profile != null) {
-    body.profile = r.profile;
+  if (src.profile != null) {
+    body.profile = src.profile;
   } else if (process.env.FIRECRAWL_PROFILE_NAME) {
     body.profile = { name: process.env.FIRECRAWL_PROFILE_NAME };
     const save = process.env.FIRECRAWL_PROFILE_SAVE_CHANGES;
