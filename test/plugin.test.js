@@ -31,10 +31,12 @@ before(async () => {
       };
       res.setHeader("content-type", "application/json");
       if (req.method === "POST" && req.url === "/v2/browser") {
+        // ttl 999 simulates a malformed response (cdpUrl but no id)
+        const noId = lastReq.body && lastReq.body.ttl === 999;
         res.end(
           JSON.stringify({
             success: true,
-            id: "sess-123",
+            ...(noId ? {} : { id: "sess-123" }),
             cdpUrl: "wss://mock.firecrawl.dev/cdp/sess-123?token=t",
             liveViewUrl: "https://mock.firecrawl.dev/live",
           })
@@ -159,6 +161,15 @@ test("explicit launch profile wins over env", async () => {
     env({ FIRECRAWL_PROFILE_NAME: "from-env" })
   );
   assert.deepEqual(lastReq.body.profile, { name: "explicit" });
+});
+
+test("browser.launch fails if Firecrawl returns no session id", async () => {
+  const { json } = await run(
+    { protocol: PROTOCOL, type: "browser.launch", request: { launchOptions: { ttl: 999 } } },
+    env()
+  );
+  assert.equal(json.success, false);
+  assert.match(json.error, /session id/);
 });
 
 test("browser.close issues DELETE for the session id", async () => {
