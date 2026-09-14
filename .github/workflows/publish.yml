@@ -16,15 +16,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      id-token: write # required for npm provenance
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           registry-url: "https://registry.npmjs.org"
+          package-manager-cache: false
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
