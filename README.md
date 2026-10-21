@@ -7,6 +7,7 @@ A [agent-browser](https://github.com/vercel-labs/agent-browser) plugin that inte
 
 ## Requirements
 
+- [agent-browser](https://github.com/vercel-labs/agent-browser) 0.28.0 or newer, the first release with `agent-browser plugin`. Older versions answer `Unknown command: plugin`; check with `agent-browser --version` and upgrade with `npm install -g agent-browser@latest`.
 - Node.js ≥ 18 (uses the built-in `fetch`).
 - A Firecrawl API key in the `FIRECRAWL_API_KEY` environment variable. Get one at [firecrawl.dev](https://www.firecrawl.dev/).
 
@@ -14,16 +15,16 @@ A [agent-browser](https://github.com/vercel-labs/agent-browser) plugin that inte
 
 ## Install
 
-From GitHub (current):
-
-```bash
-agent-browser plugin add firecrawl/agent-browser-plugin-firecrawl
-```
-
-From npm (once published):
+From npm:
 
 ```bash
 agent-browser plugin add agent-browser-plugin-firecrawl
+```
+
+From GitHub:
+
+```bash
+agent-browser plugin add firecrawl/agent-browser-plugin-firecrawl
 ```
 
 `plugin add` runs the package once, reads its `plugin.manifest`, and writes the config to `./agent-browser.json` (use `--global` for `~/.agent-browser/config.json`). Verify:
